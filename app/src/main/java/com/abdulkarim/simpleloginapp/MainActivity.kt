@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,7 +28,6 @@ import java.util.regex.Pattern
 
 class MainActivity : ComponentActivity() {
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -36,12 +36,20 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    val viewModel:LoginViewModel = viewModel()
+                    val viewModel = remember { LoginViewModel() }
 
-                    when(viewModel.uiState){
+                    when(viewModel.uiState.collectAsState().value){
                         is LoginUiState.Loading -> LoadingScreen()
-                        is LoginUiState.LoginSuccess -> Toast.makeText(this,"Success",Toast.LENGTH_SHORT).show()
-                        LoginUiState.InitialState -> LoginScreen()
+                        is LoginUiState.LoginSuccess -> {
+                            Toast.makeText(this,"Login success",Toast.LENGTH_SHORT).show()
+                            LoginScreen{
+                                viewModel.login()
+                            }
+
+                        }
+                        LoginUiState.InitialState -> LoginScreen(){
+                            viewModel.login()
+                        }
                     }
 
                 }
@@ -51,18 +59,11 @@ class MainActivity : ComponentActivity() {
 
 }
 
-sealed class LoginUiState{
-    data class Loading(val loading: Boolean) : LoginUiState()
-    data class LoginSuccess(val message:String) : LoginUiState()
-    object InitialState : LoginUiState()
-}
-
-class LoginViewModel() : ViewModel() {
-    val uiState by mutableStateOf<LoginUiState>(LoginUiState.InitialState)
-}
-
 @Composable
-fun LoginScreen() {
+fun LoginScreen(
+    onLoginButtonClicked:()-> Unit
+) {
+
     val phoneNumber = remember { mutableStateOf("") }
     val maxInputNumber = 11
     val isError = remember { mutableStateOf(false) }
@@ -128,7 +129,7 @@ fun LoginScreen() {
                         isError.value = true
                         return@clickable
                     }
-
+                    onLoginButtonClicked.invoke()
                 },
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
